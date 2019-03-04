@@ -44,6 +44,7 @@ class HTTPExample(CodeBlock):
 
     def run(self):
         config = self.state.document.settings.env.config
+        app = self.state.document.settings.env.app
 
         # Read enabled builders; Defaults to None
         chosen_builders = choose_builders(self.arguments)
@@ -114,7 +115,15 @@ class HTTPExample(CodeBlock):
         # Wrap and render main directive as 'http-example-http'
         klass = 'http-example-http'
         container = nodes.container('', classes=[klass])
-        container.append(nodes.caption('', 'http'))
+
+        if app.builder.name == 'html':
+            # Creating a caption node with the latex builder generates an error
+            # as it's not enclosed in a float, only generate for html.
+            #
+            # Only the 'http' output will be included in latex pdf as opposed
+            # to a number of codeblocks, one for each httpexample builder.
+            container.append(nodes.caption('', 'http'))
+
         container.extend(super(HTTPExample, self).run())
 
         # Init result node list
@@ -155,8 +164,17 @@ class HTTPExample(CodeBlock):
                 container.append(nodes.caption('', name))
                 container.extend(block.run())
 
-                # Append to result nodes
-                result.append(container)
+                if app.builder.name == 'html' or name == 'http':
+                    klass = 'http-example-{}'.format(name)
+                    container = nodes.container('', classes=[klass])
+
+                    if app.builder.name == 'html':
+                        container.append(nodes.caption('', name))
+
+                    container.extend(block.run())
+
+                    # Append to result nodes
+                    result.append(container)
 
         # Append optional response
         if response_content:
@@ -179,7 +197,10 @@ class HTTPExample(CodeBlock):
             # Wrap and render main directive as 'http-example-response'
             klass = 'http-example-response'
             container = nodes.container('', classes=[klass])
-            container.append(nodes.caption('', 'response'))
+
+            if app.builder.name == 'html':
+                container.append(nodes.caption('', 'response'))
+
             container.extend(block.run())
 
             # Append to result nodes
